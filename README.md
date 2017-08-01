@@ -8,6 +8,8 @@ These scripts are for installing [cylp](https://github.com/coin-or/CyLP), [CBC](
 
 These scripts handle that all for you.
 
+This script also shrinks the size of the included libraries, so that the whole final virtual environment can fit inside the size limit imposed by AWS on their lambda functions.
+
 ## Usage
 
 * Run `compile.sh` to compile `.whl` files for the libraries
