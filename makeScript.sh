@@ -7,12 +7,7 @@
 set -e
 set -x
 
-# check number of arguments
-if [ "$#" -ne 1 ] || ! [ -d "$1" ]; then
-  echo "Usage: $0 SGADIR" >&2
-  exit 1
-fi
-
+LIB_DIR=$(pwd)/lib/
 
 rm -rf worker-env  # remove stuff from previous attempt
 virtualenv -p /usr/bin/python2.7 ./worker-env
@@ -36,7 +31,7 @@ TARGETS="$TARGETS scipy==0.15"  # version specification definitely necessary
 
 # Install SCS
 SCS_WHEEL_F_NAME=scs-1.2.6-cp27-cp27mu-linux_x86_64.whl
-TARGET=$1/lib/$SCS_WHEEL_F_NAME
+TARGET=$LIB_DIR/$SCS_WHEEL_F_NAME
 TARGETS="$TARGETS $TARGET"
 
 rm -rf scs
@@ -48,7 +43,7 @@ TARGETS="$TARGETS ECOS==2.0.3" # 2.0.3 and 2.0.2  and 2.0.1 works
 TARGETS="$TARGETS cvxpy==0.4.10"
 TARGETS="$TARGETS cvxcanon==0.0.22"
 
-COMPILATION_DIR="$1/lambda/functions/genestimate/compilation-artefacts"
+COMPILATION_DIR="./compilation-artefacts"
 
 if [ ! -d "$COMPILATION_DIR" ]; then
     # make the directory if it doesn't exist
@@ -57,19 +52,13 @@ fi
 
 rm -rf $COMPILATION_DIR/makeStuff
 mkdir $COMPILATION_DIR/makeStuff
-tar -xzvf $1/lib/Cbc-2.8.5.tar.gz -C $COMPILATION_DIR/makeStuff
+tar -xzvf $LIB_DIR/Cbc-2.8.5.tar.gz -C $COMPILATION_DIR/makeStuff
 
 COIN_INSTALL_DIR="$COMPILATION_DIR/makeStuff/Cbc-2.8.5/"
 export COIN_INSTALL_DIR="$COMPILATION_DIR/makeStuff/Cbc-2.8.5/"
 
 TARGETS="$TARGETS cylp==0.2.3.6"
 TARGETS="$TARGETS nose"
-
-# sga common
-for fn in Strategies Api Consts Tools Market Iot SNS; do
-    TARGET="file://$1/lib/sgacommon$fn/"
-    TARGETS="$TARGETS $TARGET"
-done
 
 # I think sgacommon stuffs up some things
 # so reinstall the version of numpy we want
@@ -78,12 +67,12 @@ TARGETS="$TARGETS numpy==1.12.1"
 
 ./worker-env/bin/pip install $TARGETS
 
-cp $1/lib/Cbc-bins/. ./worker-env/lib/python2.7/site-packages/lib/ -r
-cp "$1/lib/shared_libraries/liblapack.so.3" ./worker-env/lib/python2.7/site-packages/lib/
-cp "$1/lib/shared_libraries/libblas.so.3" ./worker-env/lib/python2.7/site-packages/lib/
-cp "$1/lib/shared_libraries/libgfortran.so.3" ./worker-env/lib/python2.7/site-packages/lib/
-cp "$1/lib/shared_libraries/libquadmath.so.0" ./worker-env/lib/python2.7/site-packages/lib/
-cp "$1/lib/shared_libraries/libClpSolver.so.1" ./worker-env/lib/python2.7/site-packages/lib/
+cp $LIB_DIR/Cbc-bins/. ./worker-env/lib/python2.7/site-packages/lib/ -r
+cp /usr/lib64/liblapack.so.3 ./worker-env/lib/python2.7/site-packages/lib/
+cp /usr/lib64/libblas.so.3 ./worker-env/lib/python2.7/site-packages/lib/
+cp /usr/lib64/libgfortran.so.3 ./worker-env/lib/python2.7/site-packages/lib/
+cp /usr/lib64/libquadmath.so.0 ./worker-env/lib/python2.7/site-packages/lib/
+cp /usr/lib64/libClpSolver.so.1 ./worker-env/lib/python2.7/site-packages/lib/
 
 
 export LD_LIBRARY_PATH=$(pwd)/worker-env/lib/python2.7/site-packages/lib/:$LD_LIBRARY_PATH
@@ -93,7 +82,7 @@ export LD_LIBRARY_PATH=$(pwd)/worker-env/lib64/python2.7/site-packages/lib/:$LD_
 # TODO: add flush.py to sga/lib
 # so there's only 1 copy of it
 find ./worker-env/lib/python2.7/site-packages/ -regextype sed -regex ".*so$" -exec strip {} \;
-python $1/lib/flush.py
+python $LIB_DIR/flush.py
 
 python -c 'import scs'
 python -c 'import ecos'

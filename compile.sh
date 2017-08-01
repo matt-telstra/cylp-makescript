@@ -1,15 +1,13 @@
 #!/bin/bash
 
-# check number of arguments
-if [ "$#" -ne 1 ] || ! [ -d "$1" ]; then
-  echo "Usage: $0 SGADIR" >&2
-  exit 1
-fi
-
 deactivate
 
 set -e # halt if error on single line
 set -x # display commands as they are run
+
+LIB_DIR=$(pwd)/lib/
+rm -rf $LIB_DIR
+mkdir $LIB_DIR
 
 COMPILE_DIR=$(pwd)/compilation-artefacts/
 COMPILATION_ENV="$COMPILE_DIR/env/"
@@ -63,16 +61,16 @@ cd $COMPILE_DIR
 TARGET=$COMPILE_DIR/CyLP/dist/cylp-0.7.4_-cp27-cp27mu-linux_x86_64.whl
 
 echo 'copying whl across'
-cp $TARGET $1/lib/
+cp $TARGET $LIB_DIR/
 
 echo 'copying binaries accross'
-cp $COMPILE_DIR/Cbc-2.8.5/lib/. $1/lib/Cbc-bins/ -r
+cp $COMPILE_DIR/Cbc-2.8.5/lib/. $LIB_DIR/Cbc-bins/ -r
 
 echo 'copying Cbc dir across as tar.gz'
 # compress to tar.gz
 # save result to sga/lib
 cd $COMPILE_DIR/
-tar -czvf $1/lib/Cbc-2.8.5.tar.gz Cbc-2.8.5
+tar -czvf $LIB_DIR/Cbc-2.8.5.tar.gz Cbc-2.8.5
 
 echo 'compiling scipy'
 cd $COMPILE_DIR
@@ -101,7 +99,7 @@ do
 
     python setup.py bdist_wheel
     SCIPY_WHEEL=$(pwd)/dist/scipy-$VERSION-cp27-cp27mu-linux_x86_64.whl
-    cp $SCIPY_WHEEL $1/lib/
+    cp $SCIPY_WHEEL $LIB_DIR/
     echo "finished compiling scipy version $VERSION"
 done
 
@@ -165,8 +163,8 @@ python -c 'import scs'
 echo 'scs works in the build environment'
 
 # copy to sga/lib
-rm -rf $1/lib/scs*.whl
-cp $SCS_WHEEL_LOC $1/lib/$SCS_WHEEL_F_NAME
+rm -rf $LIB_DIR/scs*.whl
+cp $SCS_WHEEL_LOC $LIB_DIR/$SCS_WHEEL_F_NAME
 
 deactivate
 
@@ -183,7 +181,7 @@ $TEST_ENV/bin/pip install fastcache
 $TEST_ENV/bin/pip install multiprocess
 $TEST_ENV/bin/pip install "numpy==1.8.2" # 1.8
 $TEST_ENV/bin/pip install "scipy==0.15"
-TARGET=$1/lib/$SCS_WHEEL_F_NAME
+TARGET=$LIB_DIR/$SCS_WHEEL_F_NAME
 $TEST_ENV/bin/pip install $TARGET
 echo 'about to test import in clean env'
 python -c 'import scs'
