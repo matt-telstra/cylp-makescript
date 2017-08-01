@@ -4,7 +4,9 @@ These scripts are for installing [cylp](https://github.com/coin-or/CyLP), [CBC](
 
 ## Context
 
-`pip install cylp cvxpy` does not install cylp properly. The usual installation process involves compiling a lot of things manually. These scripts handle that for you.
+`pip install cylp cvxpy` does not install cylp properly. The usual installation process involves compiling a lot of things manually. Even if you manually compile these dependencies, pip will forget the dependencies of the first library by the time you install the 2nd. This leads to breakages, and is a nightmare to deal with. 
+
+These scripts handle that all for you.
 
 ## Usage
 
