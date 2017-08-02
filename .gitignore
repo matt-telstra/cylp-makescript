@@ -1,0 +1,7 @@
+*.pyc
+*-worker-env.zip
+*.swp
+*.save
+*.log
+compilation-artefacts/*
+lib/*

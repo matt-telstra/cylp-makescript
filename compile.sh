@@ -158,6 +158,12 @@ $SCS_COMPILE_ENV/bin/pip install $TARGET
 #$SCS_COMPILE_ENV/bin/pip install scs
 pip list --format=columns
 python -c 'import scs'
+find ./ libClpSolver 2> /dev/null | grep libClpSolver
+if [ "$?" -eq 0 ] ; then
+  echo "found something"
+  exit 1
+fi
+
 rm -rf scs
 python -c 'import scs'
 echo 'scs works in the build environment'
