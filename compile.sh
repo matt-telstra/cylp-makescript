@@ -151,19 +151,21 @@ python setup.py bdist_wheel
 
 # test the module in this env
 SCS_WHEEL_F_NAME=scs-1.2.6-cp27-cp27mu-linux_x86_64.whl
-SCS_WHEEL_LOC=$SCS_DIR/scs/python/dist/$SCS_WHEEL_F_NAME
-TARGET=$SCS_WHEEL_LOC
+SCS_WHEEL_SRC=$SCS_DIR/scs/python/dist/$SCS_WHEEL_F_NAME
+SCS_WHEEL_DST=$COMPILE_DIR/scs.whl
+cp $SCS_WHEEL_SRC $SCS_WHEEL_DST
+TARGET=$SCS_WHEEL_DST
 echo 'about to install scs from whl'
 $SCS_COMPILE_ENV/bin/pip install $TARGET
 #$SCS_COMPILE_ENV/bin/pip install scs
 pip list --format=columns
 python -c 'import scs'
-find ./ libClpSolver 2> /dev/null | grep libClpSolver
-if [ "$?" -eq 0 ] ; then
-  echo "found something"
-  #exit 1
-fi
-mv scs scs-backup
+# find ./ libClpSolver 2> /dev/null | grep libClpSolver
+#if [ "$?" -eq 0 ] ; then
+#  echo "found something"
+#  #exit 1
+#fi
+mv $SCS_DIR $COMPILE_DIR/scs-backup
 rm -rf scs
 python -c 'import scs'
 echo 'scs works in the build environment'

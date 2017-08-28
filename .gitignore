@@ -5,3 +5,4 @@
 *.log
 compilation-artefacts/*
 lib/*
+worker-env/*
