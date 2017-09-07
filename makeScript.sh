@@ -60,7 +60,6 @@ export COIN_INSTALL_DIR="$COMPILATION_DIR/makeStuff/Cbc-2.8.5/"
 TARGETS="$TARGETS cylp==0.2.3.6"
 TARGETS="$TARGETS nose"
 
-# I think sgacommon stuffs up some things
 # so reinstall the version of numpy we want
 # because pip forget what we asked for earlier
 TARGETS="$TARGETS numpy==1.12.1"
@@ -79,10 +78,9 @@ export LD_LIBRARY_PATH=$(pwd)/worker-env/lib/python2.7/site-packages/lib/:$LD_LI
 export LD_LIBRARY_PATH=$(pwd)/worker-env/lib64/python2.7/site-packages/lib/:$LD_LIBRARY_PATH
 
 # delete needless files to save space
-# TODO: add flush.py to sga/lib
 # so there's only 1 copy of it
-find ./worker-env/lib/python2.7/site-packages/ -regextype sed -regex ".*so$" -exec strip {} \;
-python $LIB_DIR/flush.py
+#find ./worker-env/lib/python2.7/site-packages/ -regextype sed -regex ".*so$" -exec strip {} \;
+#python $LIB_DIR/flush.py
 
 python -c 'import scs'
 python -c 'import ecos'
@@ -91,6 +89,7 @@ python -c 'import CVXcanon'
 python -c 'import scipy;'
 python -c 'import cylp'
 
+nosetests test.py
 
 # save this into the git repo, just to keep things trackable over time
 echo 'saving output of pip-list'

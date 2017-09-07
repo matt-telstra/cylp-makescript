@@ -110,6 +110,27 @@ echo 'about to compile and install scs'
 deactivate
 
 ###########
+# libopenblas
+###########
+# compile this library to get libopenblas.so.0
+# which is needed by SCS
+# TODO: see if the make install line up the top puts this file somewhere
+BLAS_DIR=$COMPILE_DIR/blas
+rm -rf $BLAS_DIR
+mkdir $BLAS_DIR
+BLAS_ENV=$BLAS_DIR/env
+virtualenv -p /usr/bin/python2.7 $BLAS_ENV # not sure if necessary
+. $BLAS_ENV/bin/activate
+cd $BLAS_DIR
+git clone https://github.com/xianyi/OpenBLAS.git
+cd ./OpenBLAS
+make
+mkdir $LIB_DIR/bin/ -p
+cp $BLAS_DIR/OpenBLAS/libopenblas.so.0 $LIB_DIR/bin/libopenblas.so.0
+
+deactivate
+
+###########
 # SCS
 ###########
 # We need to run the compilation within a virtual env
@@ -141,8 +162,12 @@ python -c 'import scipy; print(scipy.__version__)'
 echo 'sucessfully import scipy'
 
 cd $SCS_DIR
-git clone https://github.com/cvxgrp/scs.git
-cd $SCS_DIR/scs/python
+# git clone https://github.com/cvxgrp/scs.git # can't use this, since version changed
+# TODO: test version 1.2.7 of SCS
+wget https://github.com/cvxgrp/scs/archive/v1.2.6.tar.gz
+tar -xzf v1.2.6.tar.gz
+
+cd $SCS_DIR/scs-1.2.6/python
 echo 'installing package on system'
 #python setup.py install
 #find $(pwd)/ -type f -exec \
@@ -151,12 +176,18 @@ python setup.py bdist_wheel
 
 # test the module in this env
 SCS_WHEEL_F_NAME=scs-1.2.6-cp27-cp27mu-linux_x86_64.whl
-SCS_WHEEL_SRC=$SCS_DIR/scs/python/dist/$SCS_WHEEL_F_NAME
-SCS_WHEEL_DST=$COMPILE_DIR/scs.whl
+SCS_WHEEL_SRC=$SCS_DIR/scs-1.2.6/python/dist/$SCS_WHEEL_F_NAME
+SCS_WHEEL_DST=$COMPILE_DIR/$SCS_WHEEL_F_NAME
 cp $SCS_WHEEL_SRC $SCS_WHEEL_DST
 TARGET=$SCS_WHEEL_DST
 echo 'about to install scs from whl'
 $SCS_COMPILE_ENV/bin/pip install $TARGET
+SCS_COMPILE_ENV_BIN=$SCS_COMPILE_ENV/lib/python2.7/site-packages/lib/
+echo 'making empty bin file for scs compile env'
+mkdir -p $SCS_COMPILE_ENV_BIN
+cp $LIB_DIR/bin/libopenblas.so.0 $SCS_COMPILE_ENV_BIN/libopenblas.so.0
+OLD_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$SCS_COMPILE_ENV_BIN/:$LD_LIBRARY_PATH
 #$SCS_COMPILE_ENV/bin/pip install scs
 pip list --format=columns
 python -c 'import scs'
@@ -165,10 +196,6 @@ python -c 'import scs'
 #  echo "found something"
 #  #exit 1
 #fi
-mv $SCS_DIR $COMPILE_DIR/scs-backup
-rm -rf scs
-python -c 'import scs'
-echo 'scs works in the build environment'
 
 # copy to sga/lib
 rm -rf $LIB_DIR/scs*.whl
@@ -191,7 +218,17 @@ $TEST_ENV/bin/pip install "numpy==1.8.2" # 1.8
 $TEST_ENV/bin/pip install "scipy==0.15"
 TARGET=$LIB_DIR/$SCS_WHEEL_F_NAME
 $TEST_ENV/bin/pip install $TARGET
+
+TEST_ENV_BIN=$TEST_ENV/lib/python2.7/site-packages/lib/
+echo 'making empty bin file for scs compile env'
+mkdir -p $TEST_ENV_BIN
+cp $LIB_DIR/bin/libopenblas.so.0 $TEST_ENV_BIN/libopenblas.so.0
+export LD_LIBRARY_PATH=$TEST_ENV_BIN/:$OLD_LD_LIBRARY_PATH
+
+
 echo 'about to test import in clean env'
 python -c 'import scs'
 echo 'it works!'
 echo 'done'
+
+export LD_LIBRARY_PATH=$OLD_LD_LIBRARY_PATH
