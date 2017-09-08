@@ -27,17 +27,17 @@ TARGETS="$TARGETS six==1.10.0" # not sure if version specification is necessary
 TARGETS="$TARGETS fastcache==1.0.2"  # not sure if version specification is necessary
 TARGETS="$TARGETS multiprocess==0.70.5" # not sure if version specification is necessary
 TARGETS="$TARGETS numpy==1.12.1" # version specification definitely necessary
-TARGETS="$TARGETS scipy==0.15"  # version specification definitely necessary
+SCIPY_WHL=$LIB_DIR/scipy-0.15.0-cp27-cp27mu-linux_x86_64.whl
+TARGETS="$TARGETS $SCIPY_WHL"  # version specification definitely necessary
 
 # Install SCS
 SCS_WHEEL_F_NAME=scs-1.2.6-cp27-cp27mu-linux_x86_64.whl
-TARGET=$LIB_DIR/$SCS_WHEEL_F_NAME
-TARGETS="$TARGETS $TARGET"
+TARGETS="$TARGETS $LIB_DIR/$SCS_WHEEL_F_NAME"
 
-rm -rf scs
+#rm -rf scs
 
-./worker-env/bin/pip install $TARGETS
-TARGETS=""
+# can't install all in one go, because ECOS depends on scipy but hasn't set up dependency right
+pip install $TARGETS
 
 TARGETS="$TARGETS ECOS==2.0.3" # 2.0.3 and 2.0.2  and 2.0.1 works
 TARGETS="$TARGETS cvxpy==0.4.10"
@@ -54,10 +54,11 @@ rm -rf $COMPILATION_DIR/makeStuff
 mkdir $COMPILATION_DIR/makeStuff
 tar -xzvf $LIB_DIR/Cbc-2.8.5.tar.gz -C $COMPILATION_DIR/makeStuff
 
-COIN_INSTALL_DIR="$COMPILATION_DIR/makeStuff/Cbc-2.8.5/"
-export COIN_INSTALL_DIR="$COMPILATION_DIR/makeStuff/Cbc-2.8.5/"
+#COIN_INSTALL_DIR="$COMPILATION_DIR/makeStuff/Cbc-2.8.5/"
+#export COIN_INSTALL_DIR="$COMPILATION_DIR/makeStuff/Cbc-2.8.5/"
 
-TARGETS="$TARGETS cylp==0.2.3.6"
+#TARGETS="$TARGETS --no-binary :all: cylp==0.2.3.6"
+TARGETS="$TARGETS $LIB_DIR/cylp-0.7.4_-cp27-cp27mu-linux_x86_64.whl"
 TARGETS="$TARGETS nose"
 
 # so reinstall the version of numpy we want
@@ -66,27 +67,34 @@ TARGETS="$TARGETS numpy==1.12.1"
 
 ./worker-env/bin/pip install $TARGETS
 
-cp $LIB_DIR/Cbc-bins/. ./worker-env/lib/python2.7/site-packages/lib/ -r
-cp /usr/lib64/liblapack.so.3 ./worker-env/lib/python2.7/site-packages/lib/
-cp /usr/lib64/libblas.so.3 ./worker-env/lib/python2.7/site-packages/lib/
-cp /usr/lib64/libgfortran.so.3 ./worker-env/lib/python2.7/site-packages/lib/
-cp /usr/lib64/libquadmath.so.0 ./worker-env/lib/python2.7/site-packages/lib/
-cp /usr/lib64/libClpSolver.so.1 ./worker-env/lib/python2.7/site-packages/lib/
+ENV_BIN_DIR=$(pwd)/worker-env/lib/python2.7/site-packages/lib/
+
+cp $LIB_DIR/Cbc-bins/. $ENV_BIN_DIR -r
+cp $LIB_DIR/bin/libopenblas.so.0 $ENV_BIN_DIR/
+cp /usr/lib64/liblapack.so.3 $ENV_BIN_DIR/
+cp /usr/lib64/libblas.so.3 $ENV_BIN_DIR/
+cp /usr/lib64/libgfortran.so.3 $ENV_BIN_DIR/
+cp /usr/lib64/libquadmath.so.0 $ENV_BIN_DIR/
+#cp /usr/lib64/libClpSolver.so.1 $ENV_BIN_DIR
 
 
 export LD_LIBRARY_PATH=$(pwd)/worker-env/lib/python2.7/site-packages/lib/:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$(pwd)/worker-env/lib64/python2.7/site-packages/lib/:$LD_LIBRARY_PATH
+
+echo 'export LD_LIBRARY_PATH='$(pwd)'/worker-env/lib/python2.7/site-packages/lib/:$LD_LIBRARY_PATH' >> $(pwd)/worker-env/bin/activate
+echo 'export LD_LIBRARY_PATH='$(pwd)'/worker-env/lib64/python2.7/site-packages/lib/:$LD_LIBRARY_PATH' >> $(pwd)/worker-env/bin/activate
 
 # delete needless files to save space
 # so there's only 1 copy of it
 #find ./worker-env/lib/python2.7/site-packages/ -regextype sed -regex ".*so$" -exec strip {} \;
 #python $LIB_DIR/flush.py
 
+python -c 'import scipy; print(scipy.__version__)'
+python -c 'import scipy; assert(scipy.__version__ == "0.15.0")'
 python -c 'import scs'
 python -c 'import ecos'
 python -c 'import cvxpy'
 python -c 'import CVXcanon'
-python -c 'import scipy;'
 python -c 'import cylp'
 
 nosetests test.py

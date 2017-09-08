@@ -98,8 +98,9 @@ do
     #grep -r NPY_NO_DEPRECATED_API
 
     python setup.py bdist_wheel
-    SCIPY_WHEEL=$(pwd)/dist/scipy-$VERSION-cp27-cp27mu-linux_x86_64.whl
-    cp $SCIPY_WHEEL $LIB_DIR/
+    SCIPY_WHL_F="scipy-$VERSION-cp27-cp27mu-linux_x86_64.whl"
+    SCIPY_WHEEL=$(pwd)/dist/$SCIPY_WHL_F
+    cp $SCIPY_WHEEL $LIB_DIR/$SCIPY_WHL_F
     echo "finished compiling scipy version $VERSION"
 done
 
@@ -148,17 +149,22 @@ rm -rf $SCS_COMPILE_ENV
 virtualenv -p /usr/bin/python2.7 $SCS_COMPILE_ENV
 . $SCS_COMPILE_ENV/bin/activate
 
-$SCS_COMPILE_ENV/bin/pip install "setuptools==1.4"
-$SCS_COMPILE_ENV/bin/pip install toolz
-$SCS_COMPILE_ENV/bin/pip install six
-$SCS_COMPILE_ENV/bin/pip install fastcache
-$SCS_COMPILE_ENV/bin/pip install multiprocess
-$SCS_COMPILE_ENV/bin/pip install "numpy==1.8.2" # 1.8
-
-$SCS_COMPILE_ENV/bin/pip install --no-binary :all: "scipy==0.15"
+# Must concatenate all libraries into 1
+# otherwise pip forgets dependencies
+TARGET=""
+TARGET=$TARGET" setuptools==1.4"
+TARGET=$TARGET" toolz"
+TARGET=$TARGET" six"
+TARGET=$TARGET" fastcache"
+TARGET=$TARGET" multiprocess"
+TARGET=$TARGET" numpy==1.8.2" # 1.8
+TARGET=$TARGET" $LIB_DIR/$SCIPY_WHL_F"
+pip install $TARGET
+#pip install --no-binary :all: "scipy==0.15"
 echo 'installed scipy, about to try importing it'
 cd $COMPILE_DIR
 python -c 'import scipy; print(scipy.__version__)'
+python -c 'import scipy; assert(scipy.__version__ == "0.15.0")'
 echo 'sucessfully import scipy'
 
 cd $SCS_DIR
@@ -177,29 +183,24 @@ python setup.py bdist_wheel
 # test the module in this env
 SCS_WHEEL_F_NAME=scs-1.2.6-cp27-cp27mu-linux_x86_64.whl
 SCS_WHEEL_SRC=$SCS_DIR/scs-1.2.6/python/dist/$SCS_WHEEL_F_NAME
-SCS_WHEEL_DST=$COMPILE_DIR/$SCS_WHEEL_F_NAME
+SCS_WHEEL_DST=$LIB_DIR/$SCS_WHEEL_F_NAME
 cp $SCS_WHEEL_SRC $SCS_WHEEL_DST
-TARGET=$SCS_WHEEL_DST
 echo 'about to install scs from whl'
-$SCS_COMPILE_ENV/bin/pip install $TARGET
+pip install $SCS_WHEEL_DST
 SCS_COMPILE_ENV_BIN=$SCS_COMPILE_ENV/lib/python2.7/site-packages/lib/
 echo 'making empty bin file for scs compile env'
 mkdir -p $SCS_COMPILE_ENV_BIN
 cp $LIB_DIR/bin/libopenblas.so.0 $SCS_COMPILE_ENV_BIN/libopenblas.so.0
 OLD_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SCS_COMPILE_ENV_BIN/:$LD_LIBRARY_PATH
-#$SCS_COMPILE_ENV/bin/pip install scs
-pip list --format=columns
+pip list --format=columns > $COMPILE_DIR/scs_pip.txt
+python -c 'import scipy; assert(scipy.__version__ == "0.15.0")'
 python -c 'import scs'
 # find ./ libClpSolver 2> /dev/null | grep libClpSolver
 #if [ "$?" -eq 0 ] ; then
 #  echo "found something"
 #  #exit 1
 #fi
-
-# copy to sga/lib
-rm -rf $LIB_DIR/scs*.whl
-cp $SCS_WHEEL_LOC $LIB_DIR/$SCS_WHEEL_F_NAME
 
 deactivate
 
@@ -209,15 +210,20 @@ rm -rf $TEST_ENV
 virtualenv -p /usr/bin/python2.7 $TEST_ENV
 . $TEST_ENV/bin/activate
 
-$TEST_ENV/bin/pip install "setuptools==1.4"
-$TEST_ENV/bin/pip install toolz
-$TEST_ENV/bin/pip install six
-$TEST_ENV/bin/pip install fastcache
-$TEST_ENV/bin/pip install multiprocess
-$TEST_ENV/bin/pip install "numpy==1.8.2" # 1.8
-$TEST_ENV/bin/pip install "scipy==0.15"
-TARGET=$LIB_DIR/$SCS_WHEEL_F_NAME
-$TEST_ENV/bin/pip install $TARGET
+TARGET=""
+
+TARGET=$TARGET" setuptools==1.4"
+TARGET=$TARGET" toolz"
+TARGET=$TARGET" six"
+TARGET=$TARGET" fastcache"
+TARGET=$TARGET" multiprocess"
+TARGET=$TARGET" numpy==1.8.2" # 1.8
+TARGET=$TARGET" $LIB_DIR/$SCIPY_WHL_F"
+TARGET=$TARGET" "$SCS_WHEEL_DST
+echo "about to install: "$TARGET
+echo $TARGET > $COMPILE_DIR/target_clean.txt
+pip install $TARGET
+#pip install $SCS_WHL_DST
 
 TEST_ENV_BIN=$TEST_ENV/lib/python2.7/site-packages/lib/
 echo 'making empty bin file for scs compile env'
@@ -227,8 +233,13 @@ export LD_LIBRARY_PATH=$TEST_ENV_BIN/:$OLD_LD_LIBRARY_PATH
 
 
 echo 'about to test import in clean env'
+
+pip list --format=columns > $COMPILE_DIR/clean_pip.txt
+
+python -c 'import scipy; print(scipy.__version__)'
+python -c 'import scipy; assert(scipy.__version__ == "0.15.0")'
 python -c 'import scs'
 echo 'it works!'
+export LD_LIBRARY_PATH=$OLD_LD_LIBRARY_PATH
 echo 'done'
 
-export LD_LIBRARY_PATH=$OLD_LD_LIBRARY_PATH
